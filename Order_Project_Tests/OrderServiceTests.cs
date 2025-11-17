@@ -189,7 +189,7 @@ namespace Order_Project_Tests
             Order order = _service.CreateOrder("Webcam", oldQuantity);
 
             // Act
-            var result = _service.UpdateOrder(3, 10);
+            bool result = _service.UpdateOrder(3, 10);
 
             // Assert
             Assert.False(result);
@@ -213,11 +213,59 @@ namespace Order_Project_Tests
             Order order = _service.CreateOrder("Headphone", oldQuantity);
 
             // Act
-            var result = _service.UpdateOrder(order.Id, newQuantity);
+            bool result = _service.UpdateOrder(order.Id, newQuantity);
 
             // Assert
             Assert.False(result);
             Assert.Equal(oldQuantity, order.Quantity);
+        }
+
+        /// <summary>
+        /// Ensures that an existing order is successfully removed,
+        /// the method returns true, and inventory stock is restored.
+        /// </summary>
+        [Fact]
+        public void RemoveOrder_ShouldRemoveOrderAndReturnsTrue_WhenExistingOrder()
+        {
+            // Arrange
+            _inventoryMock.Setup(i => i.CheckStock(It.IsAny<string>(), It.IsAny<int>())).Returns(true);
+            _paymentMock.Setup(p => p.ProcessPayment(It.IsAny<Order>())).Returns(true);
+
+            string product = "Speaker";
+            int quantity = 6;
+            Order order = _service.CreateOrder(product, quantity);
+
+            // Act
+            bool result = _service.RemoveOrder(order.Id);
+
+            // Assert
+            Assert.True(result);
+            Assert.DoesNotContain(order, _service.GetOrders());
+
+            _inventoryMock.Verify(i => i.IncreaseStock(product, quantity), Times.Once);
+        }
+
+        /// <summary>
+        /// Ensures that attempting to remove a non-existent order returns false.
+        /// Confirms that no inventory updates occur and existing orders remain unchanged.
+        /// </summary>
+        [Fact]
+        public void RemoveOrder_ShouldReturnsFalse_WhenNonExistentOrder()
+        {
+            // Arrange
+            _inventoryMock.Setup(i => i.CheckStock(It.IsAny<string>(), It.IsAny<int>())).Returns(true);
+            _paymentMock.Setup(p => p.ProcessPayment(It.IsAny<Order>())).Returns(true);
+
+            Order order = _service.CreateOrder("Printer", 3);
+
+            // Act
+            bool result = _service.RemoveOrder(5);
+
+            // Assert
+            Assert.False(result);
+            Assert.Contains(order, _service.GetOrders());
+
+            _inventoryMock.Verify(i => i.IncreaseStock(It.IsAny<string>(), It.IsAny<int>()), Times.Never);
         }
     }
 }
