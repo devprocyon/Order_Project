@@ -150,5 +150,74 @@ namespace Order_Project_Tests
             _notificationMock.Verify(n => n.SendConfirmation(It.IsAny<Order>()), Times.Never);
             _inventoryMock.Verify(i => i.IncreaseStock(product, quantity), Times.Once);
         }
+
+        /// <summary>
+        /// Verifies that an existing order is successfully updated
+        /// when a valid new quantity is provided. Ensures the method
+        /// returns true and the quantity is modified.
+        /// </summary>
+        [Fact]
+        public void UpdateOrder_ShouldUpdateOrderAndReturnsTrue_WhenValidInput()
+        {
+            // Arrange
+            _inventoryMock.Setup(i => i.CheckStock(It.IsAny<string>(), It.IsAny<int>())).Returns(true);
+            _paymentMock.Setup(p => p.ProcessPayment(It.IsAny<Order>())).Returns(true);
+
+            Order order = _service.CreateOrder("Lamp", 5);
+            int newQuantity = 10;
+
+            // Act
+            bool result = _service.UpdateOrder(order.Id, newQuantity);
+
+            // Assert
+            Assert.True(result);
+            Assert.Equal(newQuantity, order.Quantity);
+        }
+
+        /// <summary>
+        /// Ensures that updating a non-existent order returns false.
+        /// Confirms the order remains unchanged.
+        /// </summary>
+        [Fact]
+        public void UpdateOrder_ShouldReturnsFalse_WhenNonExistentOrder()
+        {
+            // Arrange
+            _inventoryMock.Setup(i => i.CheckStock(It.IsAny<string>(), It.IsAny<int>())).Returns(true);
+            _paymentMock.Setup(p => p.ProcessPayment(It.IsAny<Order>())).Returns(true);
+
+            int oldQuantity = 5;
+            Order order = _service.CreateOrder("Webcam", oldQuantity);
+
+            // Act
+            var result = _service.UpdateOrder(3, 10);
+
+            // Assert
+            Assert.False(result);
+            Assert.Equal(oldQuantity, order.Quantity);
+        }
+
+        /// <summary>
+        /// Ensures that the method returns false when a non-positive quantity is provided.
+        /// Confirms the order remains unchanged.
+        /// </summary>
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-5)]
+        public void UpdateOrder_ShouldReturnsFalse_WhenInvalidQuantity(int newQuantity)
+        {
+            // Arrange
+            _inventoryMock.Setup(i => i.CheckStock(It.IsAny<string>(), It.IsAny<int>())).Returns(true);
+            _paymentMock.Setup(p => p.ProcessPayment(It.IsAny<Order>())).Returns(true);
+
+            int oldQuantity = 5;
+            Order order = _service.CreateOrder("Headphone", oldQuantity);
+
+            // Act
+            var result = _service.UpdateOrder(order.Id, newQuantity);
+
+            // Assert
+            Assert.False(result);
+            Assert.Equal(oldQuantity, order.Quantity);
+        }
     }
 }
